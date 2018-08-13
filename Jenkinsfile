@@ -1,10 +1,4 @@
 node ('master') {
-
-	environment {
-		JAVA_HOME	= '/devops_tools/java/jdk'
-		JRE_HOME    = '/devops_tools/java/jre'
-	}
-
 	//sh 'printenv'
 
 	try
@@ -31,6 +25,15 @@ node ('master') {
               	//sh "mvn sonar:sonar -Dsonar.host.url=http://10.2.2.31:9000 -Dsonar.login=a9085f7259e802b310095d3d4b6313042786782f -Dsonar.projectName=$name -Dsonar.projectKey=$name -Dsonar.projectVersion=$BUILD_NUMBER";
             }
         }
+		
+	stage("Quality Gate"){
+	   timeout(time: 2, unit: 'MINUTES') { // Just in case something goes wrong, pipeline will be killed after a timeout
+	       def qg = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
+	       if (qg.status != 'OK') {
+		   error "Pipeline aborted due to quality gate failure: ${qg.status}"
+		}
+	    }
+	}
     }
 }    
 
@@ -39,12 +42,4 @@ node ('master') {
 // Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ (info) The trailing slash is mandatory with SonarQube 6.2 and 6.3!
 // Use withSonarQubeEnv step in your pipeline (so that SonarQube taskId is correctly attached to the pipeline context).
 
-// No need to occupy a node
-stage("Quality Gate"){
-   timeout(time: 30, unit: 'MINUTES') { // Just in case something goes wrong, pipeline will be killed after a timeout
-       def qg = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
-       if (qg.status != 'OK') {
-           error "Pipeline aborted due to quality gate failure: ${qg.status}"
-        }
-    }
-}
+
